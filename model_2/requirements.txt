@@ -29,7 +29,7 @@ PyYAML>=6.0.0               # Used by train.py to read hyperparams.yaml
 
 # Reporting / export
 onnx>=1.15.0                # Export model to ONNX (used by train.py)
-onnxruntime>=1.17.0         # Validate exported ONNX model runs correctly
+onnxruntime>=1.27.0         # Validate exported ONNX model runs correctly
 
 # Optional — install for richer training dashboards
 # tensorboard>=2.14.0       # View training curves: tensorboard --logdir results/
