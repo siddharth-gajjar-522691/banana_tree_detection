@@ -1,0 +1,69 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  Dependabot — Automated Dependency Updates
+#
+#  WHY Dependabot?
+#  Dependencies go out of date. Security patches ship constantly.
+#  Without Dependabot, you find out about a vulnerability when someone
+#  exploits it. With Dependabot, GitHub opens a PR automatically whenever
+#  a dependency has a newer version — you just review and merge.
+#
+#  For a COMMERCIAL application this is non-negotiable. Your client or
+#  employer will ask "how do you manage dependency security?"
+#  The answer is: Dependabot + automated CI that runs on every PR.
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: 2
+
+updates:
+  # ── Python dependencies (pip) ────────────────────────────────────────────
+  - package-ecosystem: "pip"
+    directory: "/"             # requirements.txt is at the repo root
+    schedule:
+      interval: "weekly"       # Check every Monday
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Kolkata"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "python"
+    # WHY group minor and patch updates?
+    # If you get 15 individual Dependabot PRs on Monday, you ignore them.
+    # Grouping them into 2-3 PRs means you actually merge them.
+    groups:
+      fastapi-stack:
+        patterns:
+          - "fastapi"
+          - "uvicorn"
+          - "starlette"
+          - "pydantic"
+          - "python-multipart"
+          - "jinja2"
+      ml-stack:
+        patterns:
+          - "ultralytics"
+          - "torch"
+          - "torchvision"
+          - "opencv*"
+      dev-tools:
+        patterns:
+          - "ruff"
+          - "pytest*"
+          - "httpx"
+
+  # ── GitHub Actions ───────────────────────────────────────────────────────
+  # WHY update Actions versions?
+  # Actions like actions/checkout are external code that runs in your pipeline.
+  # Pinning to major versions (v4) is good, but Dependabot will bump major
+  # versions when they release, so you don't fall behind.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Kolkata"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "github-actions"

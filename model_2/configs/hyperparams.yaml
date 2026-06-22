@@ -1,0 +1,130 @@
+# ─────────────────────────────────────────────────────────────────────
+#  mPowered Banana Detection — Optimal Hyperparameter Configuration
+#  For use with: YOLOv11m (recommended) or YOLOv8m
+#
+#  Every value below is justified for the banana plantation domain.
+#  DO NOT blindly copy YOLO defaults — these are tuned specifically.
+# ─────────────────────────────────────────────────────────────────────
+
+# ── Optimizer ─────────────────────────────────────────────────────────
+# WHY AdamW:  SGD can get stuck early when fine-tuning on small datasets.
+#             AdamW converges faster and generalises better for transfer
+#             learning from COCO → banana domain.
+optimizer: AdamW
+
+# WHY 0.001:  YOLO default is 0.01. We go lower because we are
+#             fine-tuning a COCO-pretrained backbone — large LR
+#             destroys the learned features before the head adapts.
+lr0: 0.001
+
+# WHY 0.01:   Final LR = lr0 * lrf. Cosine schedule decays from
+#             0.001 → 0.00001. The long tail helps squeeze out
+#             the last accuracy on validation.
+lrf: 0.01
+
+momentum: 0.937
+weight_decay: 0.0005
+
+# WHY 5 epochs warmup:  Banana images are very different from COCO.
+#                        The batch norm stats need time to adjust.
+#                        Short warmup → unstable early training.
+warmup_epochs: 5
+warmup_momentum: 0.8
+warmup_bias_lr: 0.1
+
+# ── Loss weights ──────────────────────────────────────────────────────
+# WHY box=7.5:  Precise bounding boxes matter for counting. Higher box
+#               weight forces the model to localise tightly.
+box: 7.5
+
+# WHY cls=0.3:  Only 3 classes. Banana fingers, leaves, and clusters are
+#               visually distinct — the model rarely confuses them.
+#               Lowering cls weight pushes more gradient toward tight
+#               box localisation (critical for counting dense fingers).
+cls: 0.3
+
+# WHY dfl=1.5:  Distribution Focal Loss controls box edge prediction
+#               quality. 1.5 is the YOLO11 sweet spot.
+dfl: 1.5
+
+# ── Augmentation (all tuned for field plantation images) ─────────────
+
+# WHY hsv_s=0.7, hsv_v=0.4:  Banana plantations have extreme lighting
+#   variation — harsh midday sun, deep shadows under canopy, overcast.
+#   High saturation/value augmentation teaches the model to be
+#   lighting-invariant. Low hue shift keeps green colours recognisable.
+hsv_h: 0.015
+hsv_s: 0.7
+hsv_v: 0.4
+
+# WHY degrees=20:  Plantation rows are often shot at angles. Rotation
+#                  stops the model assuming bunches always hang straight.
+degrees: 20.0
+
+# WHY scale=0.5:   Farmers shoot from different distances — close-up
+#                  inspection vs. full row overview. Scale variation
+#                  is critical for multi-distance generalisation.
+scale: 0.5
+
+translate: 0.1
+
+# WHY shear/perspective=0.0:  These distort leaf and bunch shapes in
+#   ways that don't reflect real-world variation. Disabled deliberately.
+shear: 0.0
+perspective: 0.0
+
+# WHY flipud=0.2:  Bunches hang downward — but in overhead drone shots
+#                   they appear inverted. Small probability is enough.
+flipud: 0.2
+fliplr: 0.5
+
+# WHY mosaic=1.0:  Mosaics combine 4 images, giving the model context
+#   from multiple plantation scenes in a single forward pass. This is
+#   especially important when your dataset is small (<2000 images).
+mosaic: 1.0
+close_mosaic: 15   # Disable last N epochs so model fine-tunes on clean images
+
+# WHY copy_paste=0.15:  Copy-paste duplicates objects across scenes.
+#   For a COUNTING application this is extremely valuable — it creates
+#   synthetic dense-bunch scenes the model would rarely see otherwise.
+copy_paste: 0.15
+copy_paste_mode: flip
+
+# WHY mixup=0.1:  Very mild mixup (blends 2 images) adds a general
+#                  regularisation effect. Too high destroys image clarity.
+mixup: 0.1
+
+# ── Training quality ──────────────────────────────────────────────────
+
+# WHY label_smoothing=0.1:  Prevents the model from being overconfident
+#   (outputting 0.99+ scores). In agricultural applications, confidence
+#   calibration matters — the system must not over-report detections.
+label_smoothing: 0.1
+
+# WHY patience=40:  With small datasets, training can plateau for many
+#   epochs before finding better optima. 40 epochs gives it enough time
+#   without waiting forever.
+patience: 40
+
+# ── Inference (used by evaluate.py and the FastAPI app) ──────────────
+conf_threshold: 0.30   # Match current app.py setting
+iou_threshold:  0.40   # NMS IoU — tighter than YOLO default (0.7)
+                       # WHY: Individual banana fingers pack tightly together.
+                       #      Looser NMS merges adjacent fingers into one
+                       #      detection, causing undercounting.
+max_det: 500           # Max detections per image — a dense bunch can have
+                       # 100-200+ individual fingers visible at once.
+
+# ── Recommended image sizes ───────────────────────────────────────────
+# WHY 1280 as default:
+#   Individual banana fingers are small objects, especially when the
+#   camera is at field distance. At 640px many fingers merge into a blob.
+#   1280px preserves finger-level detail needed for accurate counting.
+#   If VRAM is limited (< 8 GB), use 640 with --batch 8.
+imgsz: 1280
+
+# ── Inference settings ────────────────────────────────────────────────
+# WHY max_det=500:
+#   A single tree can have many visible bananas. Default 300 is too low
+#   for a dense bunch photographed at close range.
+max_det: 500

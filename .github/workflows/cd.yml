@@ -1,0 +1,236 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  CD — Continuous Deployment
+#  Runs on: push to main branch ONLY (after CI passes)
+#
+#  WHY CD?
+#  CD answers: "How does passing code get to users automatically?"
+#  Without CD, someone has to manually SSH into the server, pull the image,
+#  and restart the container. With CD, merging to main = deployed in ~3 min.
+#
+#  PIPELINE:
+#    push to main
+#      → build Docker image
+#      → push image to GitHub Container Registry (GHCR)
+#      → SSH into production server
+#      → pull new image + restart with docker compose
+#      → health-check the live endpoint
+#
+#  REQUIRED GITHUB SECRETS (set in repo → Settings → Secrets → Actions):
+#
+#    DEPLOY_HOST         IP address or hostname of your production server
+#    DEPLOY_USER         SSH username (e.g. ubuntu, ec2-user, root)
+#    DEPLOY_SSH_KEY      Private SSH key (the full contents of your .pem file)
+#    DEPLOY_APP_DIR      Absolute path on server (e.g. /home/ubuntu/banana-app)
+#    DB_PASSWORD         MySQL banana user password (for .env on server)
+#    DB_ROOT_PASSWORD    MySQL root password (for .env on server)
+#
+#  HOW TO SET SECRETS:
+#    1. Go to your GitHub repo → Settings → Secrets and variables → Actions
+#    2. Click "New repository secret"
+#    3. Add each variable above
+#
+#  WHY secrets?  Your server IP, SSH key, and DB passwords must NEVER be in
+#  the codebase. Secrets are encrypted at rest and masked in logs.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: CD
+
+on:
+  push:
+    branches: [main]
+    # WHY only main? main = production. Feature branches trigger CI only.
+
+  # WHY workflow_dispatch? Lets you manually trigger a deploy from the GitHub
+  # UI without pushing a commit. Useful for hotfixes or rollbacks.
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Reason for manual deploy"
+        required: false
+        default: "Manual deploy"
+
+# Only one deploy can run at a time.
+# WHY? Two parallel deploys to the same server = race condition on the DB.
+concurrency:
+  group: cd-production
+  cancel-in-progress: false   # Don't cancel — let the first one finish
+
+jobs:
+  # ── Job 1: Build and Push Docker Image ──────────────────────────────────
+  build-and-push:
+    name: Build & Push to GHCR
+    runs-on: ubuntu-latest
+    # WHY output image_tag? The deploy job needs to know exactly which image
+    # to pull. Outputs pass values between jobs.
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
+      image_digest: ${{ steps.build.outputs.digest }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ── Log in to GitHub Container Registry (GHCR) ──────────────────────
+      # WHY GHCR over Docker Hub?
+      #   - GHCR is free for public repos and included in GitHub plans
+      #   - Packages live next to the code (same GitHub org/repo)
+      #   - Authentication uses GITHUB_TOKEN — no extra secret needed
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          # GITHUB_TOKEN is automatically provided by GitHub Actions —
+          # you don't need to create this secret manually.
+
+      # ── Generate image tags ──────────────────────────────────────────────
+      # WHY multiple tags?
+      #   ghcr.io/owner/banana-app:main   → always points to latest main build
+      #   ghcr.io/owner/banana-app:sha-abc123 → immutable, for rollback
+      # In production you always pull by sha tag so you know exactly what's running.
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/banana-app
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      # ── Build and push ───────────────────────────────────────────────────
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # WHY layer cache? The pip install layer (~2GB) is cached between
+          # deploys. Only changed layers are rebuilt. Saves ~4 min per deploy.
+
+      - name: Print image digest
+        run: echo "Image digest ${{ steps.build.outputs.digest }}"
+        # The digest (sha256:...) is the immutable ID of the image.
+        # It's printed to the logs for auditing.
+
+  # ── Job 2: Deploy to Production ─────────────────────────────────────────
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build-and-push     # Only runs if build-and-push succeeded
+    environment: production   # WHY environment? GitHub can require a manual
+                              # approval before deploy runs. Go to repo →
+                              # Settings → Environments → production →
+                              # "Required reviewers" to enable this gate.
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Write production .env on the server ─────────────────────────────
+      # WHY not commit .env? Your .env has passwords. It must NEVER be in git.
+      # We generate it on the server at deploy time from GitHub secrets.
+      - name: Write .env to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            mkdir -p ${{ secrets.DEPLOY_APP_DIR }}
+            cat > ${{ secrets.DEPLOY_APP_DIR }}/.env << 'EOF'
+            DB_HOST=mysql
+            DB_PORT=3306
+            DB_USER=banana
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            DB_NAME=banana_db
+            EOF
+            # Restrict permissions so only the owner can read passwords
+            chmod 600 ${{ secrets.DEPLOY_APP_DIR }}/.env
+
+      # ── Copy docker-compose.yml to server ───────────────────────────────
+      - name: Copy compose file to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: "docker-compose.yml,init.sql"
+          target: ${{ secrets.DEPLOY_APP_DIR }}
+
+      # ── Pull new image and restart ───────────────────────────────────────
+      # WHY this sequence?
+      #   docker compose pull → downloads new image (happens while old one runs)
+      #   docker compose up -d → replaces old containers with new ones
+      # This gives you near-zero downtime: pull completes before up starts.
+      - name: Deploy new image
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd ${{ secrets.DEPLOY_APP_DIR }}
+
+            # Tell compose to use the pre-built GHCR image instead of building
+            export APP_IMAGE=ghcr.io/${{ github.repository_owner }}/banana-app:latest
+
+            # Log in to GHCR on the server so it can pull private images
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
+              -u ${{ github.actor }} --password-stdin
+
+            # Pull while app is still running (zero-downtime pull)
+            docker compose pull app
+
+            # Restart with new image (downtime: ~2-5 seconds during swap)
+            docker compose up -d --remove-orphans
+
+            # Remove dangling old images to save disk space
+            docker image prune -f
+
+      # ── Health check ─────────────────────────────────────────────────────
+      # WHY health check in CD?
+      # The deploy "succeeding" only means docker compose up ran.
+      # The app might still be crashing. We wait and hit /health to confirm
+      # the app is actually serving requests.
+      - name: Verify deployment health
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            echo "Waiting for app to start..."
+            sleep 15
+
+            # Retry /health up to 5 times, 10 seconds apart
+            for i in 1 2 3 4 5; do
+              STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/health)
+              if [ "$STATUS" = "200" ]; then
+                echo "Health check passed (attempt $i)"
+                exit 0
+              fi
+              echo "Attempt $i: got HTTP $STATUS, retrying in 10s..."
+              sleep 10
+            done
+
+            echo "DEPLOYMENT FAILED — /health did not return 200"
+            docker compose logs app --tail=50
+            exit 1
+
+      # ── Notify on success ────────────────────────────────────────────────
+      - name: Print deploy summary
+        run: |
+          echo "### Deploy complete" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image:** ghcr.io/${{ github.repository_owner }}/banana-app:latest" >> $GITHUB_STEP_SUMMARY
+        # GITHUB_STEP_SUMMARY writes a markdown summary visible in the
+        # Actions UI after the workflow completes.

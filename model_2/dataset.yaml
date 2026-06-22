@@ -1,0 +1,81 @@
+# ─────────────────────────────────────────────────────────────
+#  mPowered Banana Detection — Dataset Configuration
+#  YOLOv8 / YOLOv11 format
+#
+#  HOW TO SET UP YOUR DATASET:
+#  1. Organise images + labels in the structure below:
+#
+#     dataset/
+#     ├── images/
+#     │   ├── train/   ← training images
+#     │   ├── val/     ← validation images (15-20% of total)
+#     │   └── test/    ← held-out test images (10% of total)
+#     └── labels/
+#         ├── train/   ← YOLO .txt label files (same name as image)
+#         ├── val/
+#         └── test/
+#
+#  2. Each .txt label file has one row per object:
+#     <class_id> <x_center> <y_center> <width> <height>
+#     All values normalised to [0, 1] relative to image size.
+#
+#  3. Update the `path` field below to your dataset root.
+#
+#  TIP: Use Roboflow (roboflow.com) to annotate and export
+#       directly in YOLO format. It also handles splitting.
+# ─────────────────────────────────────────────────────────────
+
+# Absolute path to dataset root (update this!)
+path: /path/to/your/dataset
+
+train: images/train
+val:   images/val
+test:  images/test
+
+# ── Classes ───────────────────────────────────────────────────
+# WHY THESE 3:
+#   banana   → individual banana fruit (finger) visible on the tree
+#              THIS is the primary counting target — not the whole bunch
+#   leaf     → health assessment (yellowing, disease detection)
+#   cluster  → a hand of bananas (multiple fingers grouped together)
+#              Helps the model understand dense groupings and gives
+#              an intermediate count when individual fingers overlap
+#
+# WHY NOT banana_bunch:
+#   The goal is to count INDIVIDUAL VISIBLE BANANAS, not whole bunches.
+#   Annotate each visible banana finger as class 0 (banana).
+#
+# WHY NOT male_flower:
+#   Unnecessary for the counting and health monitoring use case.
+nc: 3
+
+names:
+  0: banana    # Individual banana fruit / finger visible on the tree
+  1: leaf      # Banana leaf (health & canopy coverage analysis)
+  2: cluster   # A hand of bananas — group of fingers on the bunch
+
+# ── Dataset split recommendation ─────────────────────────────
+# Minimum recommended sizes for reliable training:
+#   train: ≥ 800 images
+#   val:   ≥ 150 images
+#   test:  ≥ 150 images
+#
+# For best results target:
+#   train: 2000+ images
+#   Include images from: different times of day, weather,
+#   plantation varieties, camera distances and angles.
+#
+# ── Annotation guidance ───────────────────────────────────────
+# class 0 (banana):
+#   Draw a box around EACH VISIBLE individual banana finger.
+#   If a finger is more than 50% occluded, skip it.
+#   This is the count that will be reported by the app.
+#
+# class 1 (leaf):
+#   Box around a full individual leaf. Partial leaves at frame
+#   edge can be skipped.
+#
+# class 2 (cluster):
+#   Box around a complete hand (group of ~10-20 fingers together).
+#   Use this when individual fingers are too tightly packed to box
+#   separately — the app can still report cluster count.

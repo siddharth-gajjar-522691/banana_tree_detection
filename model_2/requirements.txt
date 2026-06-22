@@ -1,0 +1,37 @@
+# mPowered model_2 — Training / Evaluation environment
+# These are for running train.py / evaluate.py / benchmark.py
+# NOT for the FastAPI Docker container (use ../requirements.txt for that)
+#
+# Install:
+#   pip install -r requirements.txt
+#
+# GPU support:
+#   If you have an NVIDIA GPU, also install the matching CUDA-enabled PyTorch:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+#   (replace cu118 with your CUDA version)
+#
+# Apple Silicon (M1/M2/M3/M4):
+#   PyTorch MPS backend is included in the standard torch package.
+#   Pass --device mps to train.py / benchmark.py.
+
+# Core training framework
+ultralytics==8.3.244        # YOLOv8 + YOLOv11; pinned to match production app
+torch>=2.1.0                # PyTorch — auto-installed as ultralytics dependency
+torchvision>=0.16.0
+
+# Data / image handling
+opencv-python>=4.10.0       # Image loading, preprocessing, visualization
+Pillow>=10.0.0              # PIL — used by ultralytics internally
+numpy>=1.24.0
+
+# Config parsing
+PyYAML>=6.0.0               # Used by train.py to read hyperparams.yaml
+
+# Reporting / export
+onnx>=1.15.0                # Export model to ONNX (used by train.py)
+onnxruntime>=1.17.0         # Validate exported ONNX model runs correctly
+
+# Optional — install for richer training dashboards
+# tensorboard>=2.14.0       # View training curves: tensorboard --logdir results/
+# wandb>=0.16.0             # Weights & Biases experiment tracking
+#                           # To enable: add project="banana-v1" to model.train()

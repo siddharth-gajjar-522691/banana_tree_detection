@@ -1,0 +1,92 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  pyproject.toml
+#
+#  WHY this file?
+#  This is the modern Python project config file (PEP 517/518).
+#  It replaces setup.py, setup.cfg, .flake8, pytest.ini, and .isort.cfg.
+#  One file → all tool configuration in one place.
+# ─────────────────────────────────────────────────────────────────────────────
+
+[tool.ruff]
+# What is ruff?
+# ruff is a Python linter + formatter written in Rust. It's 100x faster than
+# flake8 + black + isort combined and replaces all three.
+# In CI it runs in ~1 second on this entire codebase.
+
+target-version = "py311"       # Minimum Python version we support
+line-length = 100
+
+# Directories ruff should ignore completely
+exclude = [
+    ".venv",
+    "venv",
+    "__pycache__",
+    "model_2/results",         # Training output files
+    "BananaProject",           # Legacy folder kept for history
+    "migrations",
+]
+
+[tool.ruff.lint]
+# Rule sets to enable.
+# WHY these specific sets?
+select = [
+    "E",    # pycodestyle errors (e.g. indentation, whitespace)
+    "F",    # pyflakes (unused imports, undefined names)
+    "W",    # pycodestyle warnings
+    "I",    # isort (import order)
+    "UP",   # pyupgrade (modernise syntax, e.g. Optional[X] → X | None)
+    "B",    # flake8-bugbear (common bugs and design issues)
+    "S",    # flake8-bandit (security issues)
+    "RUF",  # ruff-specific rules
+]
+
+ignore = [
+    "S101",   # allow assert statements (used in tests)
+    "S603",   # allow subprocess.run (we use it in legacy code)
+    "B008",   # allow FastAPI Depends() calls in function signatures
+    "E501",   # line too long — handled by formatter, not linter
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+    "S",       # ignore all security warnings in test files
+    "F401",    # ignore unused imports in tests (fixtures imported for side effects)
+]
+"model_2/*" = [
+    "T201",    # allow print() in training scripts
+    "S",       # training scripts don't need security checks
+]
+
+[tool.ruff.format]
+# ruff format replaces black.
+# These settings match black's defaults so the output is familiar.
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  pytest configuration
+# ─────────────────────────────────────────────────────────────────────────────
+
+[tool.pytest.ini_options]
+# WHY asyncio_mode = "auto"?
+# FastAPI uses async functions. Without this setting, pytest-asyncio
+# requires you to decorate every async test with @pytest.mark.asyncio.
+# "auto" handles all async tests automatically.
+asyncio_mode = "auto"
+
+testpaths = ["tests"]    # Only look for tests in the tests/ folder
+
+# Markers prevent warnings about unrecognised marks
+markers = [
+    "slow: marks tests as slow (deselect with -m 'not slow')",
+    "integration: marks tests that need a real database or model",
+]
+
+# Show extra info in test output
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+]

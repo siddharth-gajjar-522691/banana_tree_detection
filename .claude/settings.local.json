@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c ' *)",
+      "Bash(curl -s http://localhost:8000/health)",
+      "WebFetch(domain:www.mpowered.io)",
+      "WebFetch(domain:mpowered.io)",
+      "WebFetch(domain:web.archive.org)"
+    ]
+  }
+}

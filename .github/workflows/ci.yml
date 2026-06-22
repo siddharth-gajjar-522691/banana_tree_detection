@@ -1,0 +1,160 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  CI — Continuous Integration
+#  Runs on: every push to any branch, every pull request targeting main
+#
+#  WHY CI?
+#  CI answers one question before any code reaches main:
+#  "Does this change break anything?"
+#  It runs automatically — no one has to remember to test.
+#
+#  JOBS (run in parallel where possible):
+#    lint   → code style (ruff) + type hints (pyright, light mode)
+#    test   → pytest unit/integration tests with mocked DB and model
+#    docker → proves the Dockerfile builds successfully
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: CI
+
+on:
+  push:
+    branches: ["**"]          # Every branch push triggers CI
+  pull_request:
+    branches: [main]          # Every PR targeting main gets a status check
+
+# Cancel in-progress CI runs for the same branch when a new commit is pushed.
+# WHY: Saves GitHub Actions minutes — no point finishing a CI run for a
+# commit that has already been superseded.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Job 1: Lint ─────────────────────────────────────────────────────────
+  # WHY lint first?
+  # It's the fastest job (~20 seconds). If it fails, we know immediately
+  # without waiting for tests. Fail fast = faster feedback.
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        # WHY v4? Always pin major versions. Pinning prevents supply-chain
+        # attacks where a tag is moved to malicious code.
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          # WHY 3.11? Match the Dockerfile. If CI passes on 3.12 but Docker
+          # runs 3.11, you have a hidden incompatibility.
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: lint-${{ hashFiles('requirements.txt') }}
+          # WHY cache? pip install takes 60-90s without a cache.
+          # With a warm cache it's 3-5s.
+
+      - name: Install lint tools
+        run: pip install ruff==0.4.10
+        # WHY pin ruff version? A ruff upgrade can add new rules that fail
+        # your PR even though your code didn't change. Pin it, bump manually.
+
+      - name: Run ruff (lint)
+        run: ruff check . --output-format=github
+        # --output-format=github prints annotations directly in the PR diff.
+
+      - name: Run ruff (format check)
+        run: ruff format --check .
+        # This doesn't change files — it exits non-zero if formatting differs.
+
+  # ── Job 2: Test ─────────────────────────────────────────────────────────
+  # WHY separate from lint?
+  # Tests take longer. Running them in parallel with lint saves wall-clock time.
+  # If lint fails you still see the test results.
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    # WHY no "needs: lint"? We run in parallel. If you want to only run tests
+    # when lint passes, add: needs: [lint]
+
+    env:
+      # These env vars are read by database.py and main.py.
+      # We set TESTING=1 so the app skips real DB/model loading.
+      TESTING: "1"
+      DB_HOST: "localhost"
+      DB_PORT: "3306"
+      DB_USER: "banana"
+      DB_PASSWORD: "banana123"
+      DB_NAME: "banana_db"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: test-${{ hashFiles('requirements.txt') }}
+          restore-keys: test-
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          # Install app deps but swap heavy packages for CI-friendly versions.
+          # WHY: ultralytics pulls in PyTorch (3GB). In CI we mock the model,
+          # so we don't need real PyTorch. We install a CPU-only torch to keep
+          # the install under 2 minutes.
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio httpx
+          # httpx is needed by FastAPI's TestClient (async mode)
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
+        # -v: show each test name (easier to read in CI logs)
+        # --tb=short: concise tracebacks, not full stack dumps
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: .pytest_cache/
+          retention-days: 7
+        # WHY upload? Even if tests fail, the artifact lets you download
+        # the cache and debug locally.
+
+  # ── Job 3: Docker Build ──────────────────────────────────────────────────
+  # WHY check the Docker build in CI?
+  # A PR might break the Dockerfile (missing file, wrong COPY path, bad dep).
+  # We want to catch that before it reaches main and blocks a deploy.
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        # WHY Buildx? It supports layer caching via --cache-from/--cache-to,
+        # which dramatically speeds up repeated builds.
+
+      - name: Build Docker image (no push)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false           # CI only builds — CD pushes
+          tags: banana-app:ci
+          cache-from: type=gha  # Use GitHub Actions cache for Docker layers
+          cache-to: type=gha,mode=max
+          # WHY gha cache? Without it, every CI run re-downloads Python base
+          # image and reinstalls all pip packages (~5 min). With cache: ~45s.

@@ -1,0 +1,58 @@
+services:
+
+  # ── FastAPI application ─────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: banana_fastapi_app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      # Persist result images outside the container
+      - ./static/results:/app/static/results
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ── MySQL 8 ─────────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: banana_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE:      banana_db
+      MYSQL_USER:          banana
+      MYSQL_PASSWORD:      banana123
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
+volumes:
+  mysql_data:
+
+# ── Quick-reference commands ────────────────────────────────────────
+# Build & start:      docker compose up --build
+# Start (no rebuild): docker compose up
+# Stop:               docker compose down
+# Stop + wipe DB:     docker compose down -v
+# Tail app logs:      docker compose logs -f app
+# MySQL shell:        docker exec -it banana_mysql mysql -u banana -pbanana123 banana_db

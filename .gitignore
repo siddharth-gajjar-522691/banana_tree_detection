@@ -1,0 +1,56 @@
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# ── Secrets — NEVER commit these ────────────────────────────────────────────
+.env
+.env.*
+!.env.example       # But DO commit the example (no real values)
+*.pem               # SSH private keys
+*.key
+
+# ── Model weights — too large for git (use DVC or model registry instead) ──
+Models/*.pt
+Models/*.onnx
+model_2/results/
+
+# ── Training outputs ─────────────────────────────────────────────────────────
+runs/
+wandb/
+*.cache
+
+# ── Upload / result images ────────────────────────────────────────────────────
+static/uploads/
+static/results/
+
+# ── macOS ─────────────────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+# (Don't ignore docker-compose.yml — that's source code)
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── pytest / coverage ─────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# ── Jupyter ───────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
