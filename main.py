@@ -59,7 +59,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Banana Tree Detection API",
     description=(
-        "AI-powered detection and counting of bananas and leaves using YOLOv8. "
+        "AI-powered detection and counting of bananas and leaves using Advance detection Technology. "
         "Upload an image and receive annotated results with per-class counts."
     ),
     version="2.0.0",

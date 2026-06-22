@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8000/static/images/mpowered_logo.png)",
-      "Bash(python3 -)"
+      "Bash(python3 -)",
+      "Bash(/Users/siddharth/Documents/Final_Model/.venv/bin/pip list *)",
+      "Bash(DB_HOST=localhost .venv/bin/python -c ' *)",
+      "Bash(rm -rf /Users/siddharth/Documents/Final_Model/BananaProject)",
+      "Bash(rm -f /Users/siddharth/Documents/Final_Model/2.jpg)",
+      "Bash(rm -rf /Users/siddharth/Documents/Final_Model/uploads)",
+      "Bash(rm -rf /Users/siddharth/Documents/Final_Model/__pycache__)"
     ]
   }
 }
