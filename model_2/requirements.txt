@@ -22,7 +22,7 @@ torchvision>=0.16.0
 # Data / image handling
 opencv-python>=4.10.0       # Image loading, preprocessing, visualization
 Pillow>=10.0.0              # PIL — used by ultralytics internally
-numpy>=1.24.0
+numpy>=2.5.0
 
 # Config parsing
 PyYAML>=6.0.0               # Used by train.py to read hyperparams.yaml
