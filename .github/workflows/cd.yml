@@ -23,6 +23,7 @@
 #    DEPLOY_APP_DIR      Absolute path on server (e.g. /home/ubuntu/banana-app)
 #    DB_PASSWORD         MySQL banana user password (for .env on server)
 #    DB_ROOT_PASSWORD    MySQL root password (for .env on server)
+#    (GITHUB_TOKEN is automatic — do not add it manually)
 #
 #  HOW TO SET SECRETS:
 #    1. Go to your GitHub repo → Settings → Secrets and variables → Actions
@@ -144,13 +145,14 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             mkdir -p ${{ secrets.DEPLOY_APP_DIR }}
-            cat > ${{ secrets.DEPLOY_APP_DIR }}/.env << 'EOF'
+            cat > ${{ secrets.DEPLOY_APP_DIR }}/.env << ENVEOF
             DB_HOST=mysql
             DB_PORT=3306
             DB_USER=banana
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            DB_ROOT_PASSWORD=${{ secrets.DB_ROOT_PASSWORD }}
             DB_NAME=banana_db
-            EOF
+            ENVEOF
             # Restrict permissions so only the owner can read passwords
             chmod 600 ${{ secrets.DEPLOY_APP_DIR }}/.env
 

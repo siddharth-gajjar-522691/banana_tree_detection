@@ -1,7 +1,10 @@
 services:
 
   # ── FastAPI application ─────────────────────────────────────────
+  # APP_IMAGE is set by the CD pipeline to the exact GHCR image tag.
+  # For local development, run: docker compose up --build
   app:
+    image: ${APP_IMAGE:-banana-app:local}
     build:
       context: .
       dockerfile: Dockerfile
@@ -30,10 +33,10 @@ services:
     container_name: banana_mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
       MYSQL_DATABASE:      banana_db
-      MYSQL_USER:          banana
-      MYSQL_PASSWORD:      banana123
+      MYSQL_USER:          ${DB_USER:-banana}
+      MYSQL_PASSWORD:      ${DB_PASSWORD:-banana123}
     ports:
       - "3306:3306"
     volumes:

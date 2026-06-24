@@ -14,7 +14,7 @@ env/
 # ── Secrets — NEVER commit these ────────────────────────────────────────────
 .env
 .env.*
-!.env.example       # But DO commit the example (no real values)
+!.env.example
 *.pem               # SSH private keys
 *.key
 
