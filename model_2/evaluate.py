@@ -36,7 +36,7 @@ from pathlib import Path
 
 from ultralytics import YOLO
 
-BASE    = Path(__file__).parent
+BASE = Path(__file__).parent
 RESULTS = BASE / "results"
 
 
@@ -101,7 +101,7 @@ def main():
         raise SystemExit(1)
 
     run_name = args.name or f"eval_{weights_path.stem}"
-    out_dir  = RESULTS / run_name
+    out_dir = RESULTS / run_name
     out_dir.mkdir(parents=True, exist_ok=True)
 
     print("\n" + "=" * 60)
@@ -133,7 +133,7 @@ def main():
         device=args.device,
         project=str(RESULTS),
         name=run_name,
-        plots=True,      # Generates confusion matrix, PR curve, F1 curve
+        plots=True,  # Generates confusion matrix, PR curve, F1 curve
         save_json=True,  # COCO-format JSON for external tools
         verbose=True,
         exist_ok=True,
@@ -141,8 +141,8 @@ def main():
     elapsed = time.perf_counter() - t0
 
     # ── Extract per-class metrics ───────────────────────────
-    class_names  = model.names          # {0: 'banana_bunch', 1: 'leaf', ...}
-    per_class_ap = metrics.box.maps     # list of mAP50-95 per class
+    class_names = model.names  # {0: 'banana_bunch', 1: 'leaf', ...}
+    per_class_ap = metrics.box.maps  # list of mAP50-95 per class
 
     per_class: dict = {}
     for idx, name in class_names.items():
@@ -152,23 +152,25 @@ def main():
 
     # ── Build report dict ───────────────────────────────────
     report = {
-        "timestamp":      datetime.now().isoformat(),
-        "model":          str(weights_path),
-        "dataset":        args.data,
-        "split":          args.split,
-        "image_size":     args.imgsz,
+        "timestamp": datetime.now().isoformat(),
+        "model": str(weights_path),
+        "dataset": args.data,
+        "split": args.split,
+        "image_size": args.imgsz,
         "conf_threshold": args.conf,
-        "iou_threshold":  args.iou,
-        "eval_time_s":    round(elapsed, 2),
+        "iou_threshold": args.iou,
+        "eval_time_s": round(elapsed, 2),
         "overall": {
-            "mAP50":    round(float(metrics.box.map50),  4),
-            "mAP50-95": round(float(metrics.box.map),    4),
-            "precision": round(float(metrics.box.mp),    4),
-            "recall":    round(float(metrics.box.mr),    4),
-            "F1":        round(
-                2 * float(metrics.box.mp) * float(metrics.box.mr) /
-                (float(metrics.box.mp) + float(metrics.box.mr) + 1e-9),
-                4
+            "mAP50": round(float(metrics.box.map50), 4),
+            "mAP50-95": round(float(metrics.box.map), 4),
+            "precision": round(float(metrics.box.mp), 4),
+            "recall": round(float(metrics.box.mr), 4),
+            "F1": round(
+                2
+                * float(metrics.box.mp)
+                * float(metrics.box.mr)
+                / (float(metrics.box.mp) + float(metrics.box.mr) + 1e-9),
+                4,
             ),
         },
         "per_class": per_class,

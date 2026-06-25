@@ -39,7 +39,7 @@ import json
 import time
 from pathlib import Path
 
-BASE    = Path(__file__).parent
+BASE = Path(__file__).parent
 RESULTS = BASE / "results" / "predictions"
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tiff"}
@@ -115,10 +115,7 @@ def collect_images(source: str) -> list[Path]:
         print(f"[ERROR] Not a supported image file: {p}")
         raise SystemExit(1)
     if p.is_dir():
-        imgs = sorted(
-            f for f in p.rglob("*")
-            if f.suffix.lower() in IMAGE_EXTENSIONS
-        )
+        imgs = sorted(f for f in p.rglob("*") if f.suffix.lower() in IMAGE_EXTENSIONS)
         if not imgs:
             print(f"[ERROR] No images found in {p}")
             raise SystemExit(1)
@@ -128,7 +125,7 @@ def collect_images(source: str) -> list[Path]:
 
 
 def main():
-    args   = parse_args()
+    args = parse_args()
     images = collect_images(args.source)
 
     weights = Path(args.weights)
@@ -138,7 +135,7 @@ def main():
         raise SystemExit(1)
 
     # Create timestamped output directory
-    run_ts  = time.strftime("%Y%m%d_%H%M%S")
+    run_ts = time.strftime("%Y%m%d_%H%M%S")
     out_dir = RESULTS / run_ts
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -154,11 +151,12 @@ def main():
     print("=" * 60 + "\n")
 
     from ultralytics import YOLO
-    model       = YOLO(str(weights))
+
+    model = YOLO(str(weights))
     class_names = model.names
 
     all_results = []
-    total_dets  = 0
+    total_dets = 0
 
     for idx, img_path in enumerate(images, 1):
         t0 = time.perf_counter()
@@ -177,13 +175,13 @@ def main():
         )
         ms = (time.perf_counter() - t0) * 1000
 
-        r    = preds[0]
+        r = preds[0]
         boxes = r.boxes
 
         class_counts: dict[str, int] = {}
         if boxes is not None and len(boxes) > 0:
             for i in range(len(boxes)):
-                cls_id   = int(boxes.cls[i].item())
+                cls_id = int(boxes.cls[i].item())
                 cls_name = class_names.get(cls_id, str(cls_id))
                 class_counts[cls_name] = class_counts.get(cls_name, 0) + 1
 
@@ -191,17 +189,19 @@ def main():
         total_dets += n
 
         result_entry = {
-            "image":       img_path.name,
-            "path":        str(img_path),
-            "total":       n,
-            "latency_ms":  round(ms, 1),
+            "image": img_path.name,
+            "path": str(img_path),
+            "total": n,
+            "latency_ms": round(ms, 1),
             "class_counts": class_counts,
         }
         all_results.append(result_entry)
 
         # Pretty per-image output
         counts_str = "  ".join(f"{k}: {v}" for k, v in class_counts.items())
-        print(f"  [{idx:>3}/{len(images)}]  {img_path.name:<35}  {n:>3} det  {ms:>6.1f}ms  {counts_str}")
+        print(
+            f"  [{idx:>3}/{len(images)}]  {img_path.name:<35}  {n:>3} det  {ms:>6.1f}ms  {counts_str}"
+        )
 
     # ── Summary ──────────────────────────────────────────────
     avg_ms = sum(r["latency_ms"] for r in all_results) / len(all_results)
@@ -211,24 +211,24 @@ def main():
     print(f"  Images processed : {len(all_results)}")
     print(f"  Total detections : {total_dets}")
     print(f"  Avg per image    : {avg_dt:.1f}")
-    print(f"  Avg latency      : {avg_ms:.1f}ms  ({1000/avg_ms:.1f} FPS)")
+    print(f"  Avg latency      : {avg_ms:.1f}ms  ({1000 / avg_ms:.1f} FPS)")
     if args.save:
         print(f"  Annotated images : {out_dir}/annotated/")
     print("-" * 60 + "\n")
 
     # ── Save JSON ────────────────────────────────────────────
     report = {
-        "timestamp":      run_ts,
-        "model":          str(weights),
-        "source":         args.source,
-        "conf":           args.conf,
-        "iou":            args.iou,
+        "timestamp": run_ts,
+        "model": str(weights),
+        "source": args.source,
+        "conf": args.conf,
+        "iou": args.iou,
         "summary": {
-            "images":          len(all_results),
-            "total_dets":      total_dets,
-            "avg_dets":        round(avg_dt, 2),
-            "avg_latency_ms":  round(avg_ms, 1),
-            "fps":             round(1000 / avg_ms, 1),
+            "images": len(all_results),
+            "total_dets": total_dets,
+            "avg_dets": round(avg_dt, 2),
+            "avg_latency_ms": round(avg_ms, 1),
+            "fps": round(1000 / avg_ms, 1),
         },
         "per_image": all_results,
     }

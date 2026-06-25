@@ -7,11 +7,11 @@ import mysql.connector
 from mysql.connector import Error, pooling
 
 _DB_CONFIG = {
-    "host":     os.getenv("DB_HOST",     "mysql"),
-    "port":     int(os.getenv("DB_PORT", "3306")),
-    "user":     os.getenv("DB_USER",     "banana"),
+    "host": os.getenv("DB_HOST", "mysql"),
+    "port": int(os.getenv("DB_PORT", "3306")),
+    "user": os.getenv("DB_USER", "banana"),
     "password": os.getenv("DB_PASSWORD", "banana123"),
-    "database": os.getenv("DB_NAME",     "banana_db"),
+    "database": os.getenv("DB_NAME", "banana_db"),
 }
 
 _pool: pooling.MySQLConnectionPool | None = None

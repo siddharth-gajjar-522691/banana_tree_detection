@@ -38,8 +38,8 @@ import json
 import time
 from pathlib import Path
 
-BASE    = Path(__file__).parent
-MODELS  = BASE.parent / "Models"
+BASE = Path(__file__).parent
+MODELS = BASE.parent / "Models"
 RESULTS = BASE / "results" / "benchmark"
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tiff"}
@@ -112,10 +112,7 @@ def find_images(directory: str, max_images: int) -> list[Path]:
     if not d.exists():
         print(f"[ERROR] Test directory not found: {d}")
         raise SystemExit(1)
-    images = [
-        f for f in sorted(d.rglob("*"))
-        if f.suffix.lower() in IMAGE_EXTENSIONS
-    ]
+    images = [f for f in sorted(d.rglob("*")) if f.suffix.lower() in IMAGE_EXTENSIONS]
     if not images:
         print(f"[ERROR] No images found in {d}")
         raise SystemExit(1)
@@ -141,7 +138,7 @@ def benchmark_model(
     class_names = model.names
 
     per_image = []
-    latencies  = []
+    latencies = []
 
     for img in images:
         t0 = time.perf_counter()
@@ -168,33 +165,37 @@ def benchmark_model(
             for i in range(len(boxes)):
                 cls_id = int(boxes.cls[i].item())
                 conf_v = float(boxes.conf[i].item())
-                detections.append({
-                    "class":      class_names.get(cls_id, str(cls_id)),
-                    "confidence": round(conf_v, 3),
-                })
+                detections.append(
+                    {
+                        "class": class_names.get(cls_id, str(cls_id)),
+                        "confidence": round(conf_v, 3),
+                    }
+                )
 
-        per_image.append({
-            "image":      img.name,
-            "detections": len(detections),
-            "latency_ms": round(ms, 1),
-            "classes":    detections,
-        })
+        per_image.append(
+            {
+                "image": img.name,
+                "detections": len(detections),
+                "latency_ms": round(ms, 1),
+                "classes": detections,
+            }
+        )
 
-    avg_lat  = sum(latencies) / len(latencies)
-    fps      = 1000.0 / avg_lat if avg_lat > 0 else 0
+    avg_lat = sum(latencies) / len(latencies)
+    fps = 1000.0 / avg_lat if avg_lat > 0 else 0
     avg_dets = sum(d["detections"] for d in per_image) / len(per_image)
 
     return {
-        "model":             str(path),
-        "params_M":          round(sum(p.numel() for p in model.model.parameters()) / 1e6, 2),
-        "classes":           list(class_names.values()),
-        "images_tested":     len(images),
-        "avg_latency_ms":    round(avg_lat, 1),
-        "fps":               round(fps, 1),
-        "p50_latency_ms":    round(sorted(latencies)[len(latencies) // 2], 1),
-        "p95_latency_ms":    round(sorted(latencies)[int(len(latencies) * 0.95)], 1),
-        "avg_detections":    round(avg_dets, 2),
-        "per_image":         per_image,
+        "model": str(path),
+        "params_M": round(sum(p.numel() for p in model.model.parameters()) / 1e6, 2),
+        "classes": list(class_names.values()),
+        "images_tested": len(images),
+        "avg_latency_ms": round(avg_lat, 1),
+        "fps": round(fps, 1),
+        "p50_latency_ms": round(sorted(latencies)[len(latencies) // 2], 1),
+        "p95_latency_ms": round(sorted(latencies)[int(len(latencies) * 0.95)], 1),
+        "avg_detections": round(avg_dets, 2),
+        "per_image": per_image,
     }
 
 
@@ -211,12 +212,12 @@ def print_summary_table(results: list[dict]) -> str:
         if r.get("skipped"):
             lines.append(f"  {Path(r['model']).name:<30}  SKIPPED — {r['error']}")
             continue
-        name   = Path(r["model"]).name
+        name = Path(r["model"]).name
         params = f"{r['params_M']}M"
-        lat    = f"{r['avg_latency_ms']}ms"
-        fps    = f"{r['fps']}"
-        dets   = f"{r['avg_detections']}"
-        cls    = ", ".join(r["classes"][:3])
+        lat = f"{r['avg_latency_ms']}ms"
+        fps = f"{r['fps']}"
+        dets = f"{r['avg_detections']}"
+        cls = ", ".join(r["classes"][:3])
         if len(r["classes"]) > 3:
             cls += "…"
         lines.append(f"  {name:<30} {params:>8}  {lat:>8}  {fps:>6}  {dets:>8}  {cls}")
@@ -246,7 +247,7 @@ def main():
 
     # Build model list: default production models + new model
     model_paths = list(args.models)
-    new_model   = Path(args.new_model)
+    new_model = Path(args.new_model)
     if new_model.exists() and str(new_model) not in model_paths:
         model_paths.append(str(new_model))
     elif not new_model.exists():
@@ -260,7 +261,8 @@ def main():
     for mp in model_paths:
         print(f"\n  Benchmarking: {mp}")
         r = benchmark_model(
-            mp, images,
+            mp,
+            images,
             imgsz=args.imgsz,
             conf=args.conf,
             iou=args.iou,
@@ -269,18 +271,20 @@ def main():
         )
         all_results.append(r)
         if not r.get("skipped"):
-            print(f"    ✓ avg {r['avg_latency_ms']}ms  |  {r['fps']} FPS  |  {r['avg_detections']} dets/image")
+            print(
+                f"    ✓ avg {r['avg_latency_ms']}ms  |  {r['fps']} FPS  |  {r['avg_detections']} dets/image"
+            )
 
     # Save full JSON
     json_path = RESULTS / "comparison.json"
     payload = {
-        "timestamp":   time.strftime("%Y-%m-%dT%H:%M:%S"),
-        "test_dir":    args.test_dir,
-        "imgsz":       args.imgsz,
-        "conf":        args.conf,
-        "iou":         args.iou,
-        "device":      args.device,
-        "models":      all_results,
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "test_dir": args.test_dir,
+        "imgsz": args.imgsz,
+        "conf": args.conf,
+        "iou": args.iou,
+        "device": args.device,
+        "models": all_results,
     }
     with open(json_path, "w") as f:
         json.dump(payload, f, indent=2)

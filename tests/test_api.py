@@ -31,6 +31,7 @@ def _make_ultralytics_stub():
     class FakeYOLO:
         def __init__(self, path, task=None):
             self.names = {0: "banana", 1: "leaf", 2: "cluster"}
+
         def __call__(self, *args, **kwargs):
             return []
 
@@ -43,7 +44,7 @@ sys.modules.setdefault("ultralytics", _make_ultralytics_stub())
 # ── Patch database before import ────────────────────────────────────────────
 import database as _db_module  # noqa: E402
 
-_db_module.db_available = False    # Simulate no DB in CI
+_db_module.db_available = False  # Simulate no DB in CI
 _db_module.get_recent_detections = lambda limit=10: []
 _db_module.save_detection = lambda **kwargs: None
 _db_module.wait_for_db = lambda *a, **kw: None
@@ -119,12 +120,14 @@ class TestDetectEndpoint:
         """Create a minimal valid PNG in memory (1x1 white pixel)."""
         import struct
         import zlib
+
         def chunk(name: bytes, data: bytes) -> bytes:
             c = name + data
             return struct.pack(">I", len(data)) + c + struct.pack(">I", zlib.crc32(c))
+
         sig = b"\x89PNG\r\n\x1a\n"
         ihdr = chunk(b"IHDR", struct.pack(">IIBBBBB", 1, 1, 8, 2, 0, 0, 0))
-        raw  = b"\x00\xff\xff\xff"
+        raw = b"\x00\xff\xff\xff"
         idat = chunk(b"IDAT", zlib.compress(raw))
         iend = chunk(b"IEND", b"")
         return sig + ihdr + idat + iend
@@ -142,7 +145,7 @@ class TestDetectEndpoint:
 
         with patch("shutil.copyfileobj"):
             with patch("main.UPLOADS_DIR", tmp_path):
-                data  = {"confidence": "0.30"}
+                data = {"confidence": "0.30"}
                 files = {"image_file": ("test.png", image_bytes, "image/png")}
                 response = client.post("/detect", data=data, files=files)
 
@@ -155,19 +158,19 @@ class TestDetectEndpoint:
 
     def test_detect_rejects_invalid_file_type(self, mock_detector):
         files = {"image_file": ("malware.exe", b"not an image", "application/octet-stream")}
-        data  = {"confidence": "0.30"}
+        data = {"confidence": "0.30"}
         response = client.post("/detect", data=data, files=files)
         assert response.status_code == 400
 
     def test_detect_rejects_low_confidence(self, mock_detector):
         files = {"image_file": ("test.png", self._make_image_bytes(), "image/png")}
-        data  = {"confidence": "0.05"}   # Below 0.10 minimum
+        data = {"confidence": "0.05"}  # Below 0.10 minimum
         response = client.post("/detect", data=data, files=files)
-        assert response.status_code == 422   # FastAPI validation error
+        assert response.status_code == 422  # FastAPI validation error
 
     def test_detect_rejects_high_confidence(self, mock_detector):
         files = {"image_file": ("test.png", self._make_image_bytes(), "image/png")}
-        data  = {"confidence": "0.99"}   # Above 0.95 maximum
+        data = {"confidence": "0.99"}  # Above 0.95 maximum
         response = client.post("/detect", data=data, files=files)
         assert response.status_code == 422
 

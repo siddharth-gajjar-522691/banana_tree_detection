@@ -7,9 +7,16 @@ from ultralytics import YOLO
 
 # OpenCV uses BGR order
 _BBOX_COLORS = [
-    (164, 120,  87), ( 68, 148, 228), ( 93,  97, 209), (178, 182, 133),
-    ( 88, 159, 106), ( 96, 202, 231), (159, 124, 168), (169, 162, 241),
-    ( 98, 118, 150), (172, 176, 184),
+    (164, 120, 87),
+    (68, 148, 228),
+    (93, 97, 209),
+    (178, 182, 133),
+    (88, 159, 106),
+    (96, 202, 231),
+    (159, 124, 168),
+    (169, 162, 241),
+    (98, 118, 150),
+    (172, 176, 184),
 ]
 
 
@@ -28,7 +35,9 @@ class YOLODetector:
         self._model = YOLO(model_path, task="detect")
         self._labels: dict[int, str] = self._model.names
 
-    def detect(self, image_path: str, output_path: str, confidence: float = 0.30) -> DetectionResult:
+    def detect(
+        self, image_path: str, output_path: str, confidence: float = 0.30
+    ) -> DetectionResult:
         start = time.perf_counter()
 
         frame = cv2.imread(image_path)
@@ -64,11 +73,22 @@ class YOLODetector:
                 frame,
                 (xmin, label_y - lh - 10),
                 (xmin + lw, label_y + baseline - 10),
-                color, cv2.FILLED,
+                color,
+                cv2.FILLED,
             )
-            cv2.putText(frame, label, (xmin, label_y - 7), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+            cv2.putText(
+                frame, label, (xmin, label_y - 7), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1
+            )
 
-        cv2.putText(frame, f"Total: {object_count}", (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 255), 2)
+        cv2.putText(
+            frame,
+            f"Total: {object_count}",
+            (10, 40),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.9,
+            (0, 255, 255),
+            2,
+        )
 
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         if not cv2.imwrite(output_path, frame):

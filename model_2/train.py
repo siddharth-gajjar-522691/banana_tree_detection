@@ -29,9 +29,9 @@ from pathlib import Path
 import yaml
 from ultralytics import YOLO
 
-BASE       = Path(__file__).parent
+BASE = Path(__file__).parent
 HYPER_FILE = BASE / "configs" / "hyperparams.yaml"
-RESULTS    = BASE / "results"
+RESULTS = BASE / "results"
 
 
 def load_hyperparams() -> dict:
@@ -41,7 +41,7 @@ def load_hyperparams() -> dict:
 
 def parse_args():
     hp = load_hyperparams()
-    p  = argparse.ArgumentParser(
+    p = argparse.ArgumentParser(
         description="Train mPowered banana detection model",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
@@ -57,21 +57,28 @@ def parse_args():
             "  A local .pt file to fine-tune from a previous run."
         ),
     )
-    p.add_argument("--data",    default=str(BASE / "dataset.yaml"),
-                   help="Path to dataset.yaml")
-    p.add_argument("--epochs",  type=int,   default=150)
-    p.add_argument("--imgsz",   type=int,   default=hp.get("imgsz", 1280),
-                   help="Input image size. 1280=default (individual bananas are small objects), 640=faster")
-    p.add_argument("--batch",   type=int,   default=16,
-                   help="Batch size. Reduce to 8 if VRAM < 8 GB")
-    p.add_argument("--device",  default="0",
-                   help="0 (GPU), cpu, mps (Apple Silicon), 0,1 (multi-GPU)")
-    p.add_argument("--name",    default="banana_v1",
-                   help="Run name — results saved to results/<name>/")
-    p.add_argument("--resume",  action="store_true",
-                   help="Resume the last interrupted training run")
-    p.add_argument("--no-cache", dest="cache", action="store_false",
-                   help="Disable RAM image caching (use if RAM < 16 GB)")
+    p.add_argument("--data", default=str(BASE / "dataset.yaml"), help="Path to dataset.yaml")
+    p.add_argument("--epochs", type=int, default=150)
+    p.add_argument(
+        "--imgsz",
+        type=int,
+        default=hp.get("imgsz", 1280),
+        help="Input image size. 1280=default (individual bananas are small objects), 640=faster",
+    )
+    p.add_argument("--batch", type=int, default=16, help="Batch size. Reduce to 8 if VRAM < 8 GB")
+    p.add_argument(
+        "--device", default="0", help="0 (GPU), cpu, mps (Apple Silicon), 0,1 (multi-GPU)"
+    )
+    p.add_argument(
+        "--name", default="banana_v1", help="Run name — results saved to results/<name>/"
+    )
+    p.add_argument("--resume", action="store_true", help="Resume the last interrupted training run")
+    p.add_argument(
+        "--no-cache",
+        dest="cache",
+        action="store_false",
+        help="Disable RAM image caching (use if RAM < 16 GB)",
+    )
     p.set_defaults(cache=True)
     return p.parse_args(), hp
 
@@ -116,7 +123,6 @@ def main():
         project=str(RESULTS),
         name=args.name,
         resume=args.resume,
-
         # ── Optimizer (from hyperparams.yaml) ─────────────────
         optimizer=hp["optimizer"],
         lr0=hp["lr0"],
@@ -126,12 +132,10 @@ def main():
         warmup_epochs=hp["warmup_epochs"],
         warmup_momentum=hp["warmup_momentum"],
         warmup_bias_lr=hp["warmup_bias_lr"],
-
         # ── Loss weights ──────────────────────────────────────
         box=hp["box"],
         cls=hp["cls"],
         dfl=hp["dfl"],
-
         # ── Augmentation ──────────────────────────────────────
         hsv_h=hp["hsv_h"],
         hsv_s=hp["hsv_s"],
@@ -148,20 +152,18 @@ def main():
         copy_paste=hp["copy_paste"],
         copy_paste_mode=hp["copy_paste_mode"],
         mixup=hp["mixup"],
-
         # ── Training quality ──────────────────────────────────
         label_smoothing=hp["label_smoothing"],
         patience=hp["patience"],
-
         # ── Misc ──────────────────────────────────────────────
-        val=True,           # Validate after every epoch
-        save=True,          # Save best.pt and last.pt
-        save_period=-1,     # Only save best (not every epoch checkpoint)
-        plots=True,         # Generate training curve plots
+        val=True,  # Validate after every epoch
+        save=True,  # Save best.pt and last.pt
+        save_period=-1,  # Only save best (not every epoch checkpoint)
+        plots=True,  # Generate training curve plots
         verbose=True,
         seed=42,
         deterministic=True,
-        amp=True,           # Mixed-precision — faster on modern GPUs
+        amp=True,  # Mixed-precision — faster on modern GPUs
         cache=args.cache,
         single_cls=False,
     )
