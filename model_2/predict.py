@@ -73,7 +73,7 @@ def parse_args():
         "--conf",
         type=float,
         default=0.30,
-        help="Confidence threshold (0.0–1.0)",
+        help="Confidence threshold (0.0-1.0)",
     )
     p.add_argument(
         "--iou",

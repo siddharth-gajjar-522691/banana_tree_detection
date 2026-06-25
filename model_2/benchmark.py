@@ -37,7 +37,6 @@ import argparse
 import json
 import time
 from pathlib import Path
-from typing import List
 
 BASE    = Path(__file__).parent
 MODELS  = BASE.parent / "Models"
@@ -108,7 +107,7 @@ def parse_args():
     return p.parse_args()
 
 
-def find_images(directory: str, max_images: int) -> List[Path]:
+def find_images(directory: str, max_images: int) -> list[Path]:
     d = Path(directory)
     if not d.exists():
         print(f"[ERROR] Test directory not found: {d}")
@@ -125,7 +124,7 @@ def find_images(directory: str, max_images: int) -> List[Path]:
 
 def benchmark_model(
     model_path: str,
-    images: List[Path],
+    images: list[Path],
     imgsz: int,
     conf: float,
     iou: float,

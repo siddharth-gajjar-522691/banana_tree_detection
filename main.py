@@ -2,7 +2,6 @@ import shutil
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
@@ -29,7 +28,7 @@ UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 # ── App state ──────────────────────────────────────────────────────────────────
-detector: Optional[YOLODetector] = None
+detector: YOLODetector | None = None
 
 
 # ── Lifespan ───────────────────────────────────────────────────────────────────
@@ -137,7 +136,7 @@ async def health():
         try:
             database.get_recent_detections(limit=1)
             db_ok = True
-        except Exception:
+        except Exception:  # noqa: S110
             pass
 
     return HealthResponse(

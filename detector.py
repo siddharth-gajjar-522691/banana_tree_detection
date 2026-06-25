@@ -1,9 +1,8 @@
 import time
-import cv2
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict
 
+import cv2
 from ultralytics import YOLO
 
 # OpenCV uses BGR order
@@ -17,7 +16,7 @@ _BBOX_COLORS = [
 @dataclass
 class DetectionResult:
     object_count: int
-    detection_summary: Dict[str, int]
+    detection_summary: dict[str, int]
     processing_time_ms: float
     output_path: str
 
@@ -27,7 +26,7 @@ class YOLODetector:
 
     def __init__(self, model_path: str) -> None:
         self._model = YOLO(model_path, task="detect")
-        self._labels: Dict[int, str] = self._model.names
+        self._labels: dict[int, str] = self._model.names
 
     def detect(self, image_path: str, output_path: str, confidence: float = 0.30) -> DetectionResult:
         start = time.perf_counter()
@@ -40,7 +39,7 @@ class YOLODetector:
         boxes = results[0].boxes
 
         object_count = 0
-        class_summary: Dict[str, int] = {}
+        class_summary: dict[str, int] = {}
 
         for box in boxes:
             conf = float(box.conf)
@@ -73,7 +72,7 @@ class YOLODetector:
 
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         if not cv2.imwrite(output_path, frame):
-            raise IOError(f"Failed to write output image: {output_path}")
+            raise OSError(f"Failed to write output image: {output_path}")
 
         elapsed_ms = round((time.perf_counter() - start) * 1000, 1)
         return DetectionResult(

@@ -2,7 +2,6 @@ import datetime
 import json
 import os
 import time
-from typing import Optional
 
 import mysql.connector
 from mysql.connector import Error, pooling
@@ -15,7 +14,7 @@ _DB_CONFIG = {
     "database": os.getenv("DB_NAME",     "banana_db"),
 }
 
-_pool: Optional[pooling.MySQLConnectionPool] = None
+_pool: pooling.MySQLConnectionPool | None = None
 db_available: bool = False
 
 

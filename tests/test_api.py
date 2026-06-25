@@ -15,7 +15,6 @@ import sys
 import types
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -42,7 +41,8 @@ def _make_ultralytics_stub():
 sys.modules.setdefault("ultralytics", _make_ultralytics_stub())
 
 # ── Patch database before import ────────────────────────────────────────────
-import database as _db_module
+import database as _db_module  # noqa: E402
+
 _db_module.db_available = False    # Simulate no DB in CI
 _db_module.get_recent_detections = lambda limit=10: []
 _db_module.save_detection = lambda **kwargs: None
@@ -50,11 +50,10 @@ _db_module.wait_for_db = lambda *a, **kw: None
 _db_module.init_pool = lambda *a, **kw: None
 
 # ── Now import the app ───────────────────────────────────────────────────────
-import main as _main_module
+import main as _main_module  # noqa: E402
 
 # Build test client WITHOUT triggering the real lifespan
 # (which would try to load Models/my_model.pt and connect to MySQL)
-from fastapi.testclient import TestClient
 
 client = TestClient(_main_module.app, raise_server_exceptions=True)
 
@@ -63,7 +62,7 @@ client = TestClient(_main_module.app, raise_server_exceptions=True)
 @dataclass
 class FakeDetectionResult:
     object_count: int
-    detection_summary: Dict[str, int]
+    detection_summary: dict[str, int]
     processing_time_ms: float
 
 
@@ -118,7 +117,8 @@ class TestHealthEndpoint:
 class TestDetectEndpoint:
     def _make_image_bytes(self) -> bytes:
         """Create a minimal valid PNG in memory (1x1 white pixel)."""
-        import struct, zlib
+        import struct
+        import zlib
         def chunk(name: bytes, data: bytes) -> bytes:
             c = name + data
             return struct.pack(">I", len(data)) + c + struct.pack(">I", zlib.crc32(c))

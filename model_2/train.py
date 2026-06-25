@@ -192,7 +192,7 @@ def main():
 
     print("\n  Next steps:")
     print(f"    Evaluate : python evaluate.py --weights {best}")
-    print(f"    Benchmark: python benchmark.py --test_dir /path/to/test/images")
+    print("    Benchmark: python benchmark.py --test_dir /path/to/test/images")
     print(f"    Deploy   : copy {best} to ../Models/ and restart Docker\n")
 
     return results
