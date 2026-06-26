@@ -10,7 +10,7 @@ services:
       dockerfile: Dockerfile
     container_name: banana_fastapi_app
     ports:
-      - "8000:8000"
+      - "8001:8000"   # 8000 is taken by agrisense; banana app on 8001
     env_file:
       - .env
     depends_on:
@@ -38,7 +38,7 @@ services:
       MYSQL_USER:          ${DB_USER:-banana}
       MYSQL_PASSWORD:      ${DB_PASSWORD:-banana123}
     ports:
-      - "3306:3306"
+      - "3307:3306"   # 3306 may be taken by agrisense's MySQL; exposed on 3307
     volumes:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
       - mysql_data:/var/lib/mysql
@@ -59,3 +59,4 @@ volumes:
 # Stop + wipe DB:     docker compose down -v
 # Tail app logs:      docker compose logs -f app
 # MySQL shell:        docker exec -it banana_mysql mysql -u banana -pbanana123 banana_db
+# App URL:            http://YOUR_SERVER_IP:8001

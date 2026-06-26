@@ -174,7 +174,7 @@ jobs:
             sleep 20
 
             for i in 1 2 3 4 5; do
-              STATUS=$(curl -sf -o /dev/null -w "%{http_code}" http://localhost:8000/health || echo "000")
+              STATUS=$(curl -sf -o /dev/null -w "%{http_code}" http://localhost:8001/health || echo "000")
               echo "Attempt $i — HTTP $STATUS"
               if [ "$STATUS" = "200" ]; then
                 echo "Deployment successful!"
