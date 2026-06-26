@@ -48,6 +48,12 @@ jobs:
   build-and-push:
     name: Build & Push to GHCR
     runs-on: ubuntu-latest
+    # WHY these permissions?
+    # GITHUB_TOKEN is read-only by default. packages:write is required
+    # to push a Docker image to GHCR for the first time (create_package).
+    permissions:
+      contents: read
+      packages: write
     outputs:
       image: ${{ steps.meta.outputs.tags }}
 
