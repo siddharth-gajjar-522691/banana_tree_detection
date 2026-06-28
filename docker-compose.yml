@@ -17,6 +17,8 @@ services:
       mysql:
         condition: service_healthy
     volumes:
+      # Model weights live on the host — not baked into the image (too large for git)
+      - ./Models:/app/Models
       # Persist result images outside the container
       - ./static/results:/app/static/results
     restart: unless-stopped
