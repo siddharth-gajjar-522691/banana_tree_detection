@@ -19,12 +19,15 @@
 #    DB_PASSWORD         MySQL banana user password
 #    DB_ROOT_PASSWORD    MySQL root password
 #    GHCR_TOKEN          GitHub Personal Access Token with read:packages scope
-#                        → github.com → Settings → Developer settings
+#                        WHY? GITHUB_TOKEN only lives during the workflow run.
+#                        The server needs its own long-lived token to pull
+#                        the image at any time (not just during CI).
+#                        Create at: github.com → Settings → Developer settings
 #                          → Personal access tokens → Tokens (classic)
 #                          → Generate new token → tick "read:packages"
-#                        WHY a separate token? GITHUB_TOKEN only lives during
-#                        the workflow run. The server needs its own long-lived
-#                        token to pull the image at deploy time.
+#
+#  NOTE: No GHCR_PUSH_TOKEN needed. The build-and-push job uses GITHUB_TOKEN
+#  with packages:write permission — no PAT required for pushing.
 # ─────────────────────────────────────────────────────────────────────────────
 
 name: CD
@@ -68,7 +71,9 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PUSH_TOKEN }}
+          # GITHUB_TOKEN works here because this job has packages:write permission.
+          # No PAT needed — avoids the GHCR_PUSH_TOKEN secret entirely.
+          password: ${{ github.token }}
 
       - name: Generate image tags
         id: meta
