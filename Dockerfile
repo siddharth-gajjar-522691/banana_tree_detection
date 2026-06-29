@@ -10,15 +10,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies first (layer-cached until requirements change)
-COPY requirements.txt .
-# --extra-index-url lets pip resolve ALL deps together in one pass.
-# torch/torchvision come from the CPU wheel index (~200 MB vs 2 GB GPU build).
-# ultralytics sees torch already satisfied and skips the GPU download.
+# ── Layer 1: PyTorch CPU (heaviest — isolated so OOM doesn't redo everything) ─
+# CPU-only wheel is ~200 MB vs ~2 GB for the default GPU build.
 RUN pip install --no-cache-dir \
-    --extra-index-url https://download.pytorch.org/whl/cpu \
     torch torchvision \
-    -r requirements.txt
+    --index-url https://download.pytorch.org/whl/cpu
+
+# ── Layer 2: ultralytics (needs torch already present to avoid re-downloading) ─
+COPY requirements.txt .
+RUN pip install --no-cache-dir ultralytics>=8.3.0
+
+# ── Layer 3: remaining lightweight packages ────────────────────────────────────
+RUN pip install --no-cache-dir \
+    "fastapi>=0.115.0" \
+    "uvicorn[standard]>=0.30.0" \
+    "python-multipart>=0.0.9" \
+    "jinja2>=3.1.4" \
+    "python-dotenv>=1.0.0" \
+    "opencv-python-headless>=4.10.0" \
+    "mysql-connector-python>=8.3.0"
 
 # Copy source code
 COPY main.py detector.py database.py schemas.py ./
