@@ -15,12 +15,12 @@
 #   Pass --device mps to train.py / benchmark.py.
 
 # Core training framework
-ultralytics==8.3.244        # YOLOv8 + YOLOv11; pinned to match production app
-torch>=2.1.0                # PyTorch — auto-installed as ultralytics dependency
-torchvision>=0.16.0
+ultralytics==8.4.82        # YOLOv8 + YOLOv11; pinned to match production app
+torch>=2.12.1                # PyTorch — auto-installed as ultralytics dependency
+torchvision>=0.27.1
 
 # Data / image handling
-opencv-python>=4.10.0       # Image loading, preprocessing, visualization
+opencv-python>=4.13.0.92       # Image loading, preprocessing, visualization
 Pillow>=10.0.0              # PIL — used by ultralytics internally
 numpy>=1.24.0
 
