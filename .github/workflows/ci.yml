@@ -44,7 +44,7 @@ jobs:
         # attacks where a tag is moved to malicious code.
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           # WHY 3.11? Match the Dockerfile. If CI passes on 3.12 but Docker
@@ -94,7 +94,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
