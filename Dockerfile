@@ -12,11 +12,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Python dependencies first (layer-cached until requirements change)
 COPY requirements.txt .
-# Install CPU-only PyTorch first — avoids pulling the 2GB GPU build which
-# is unnecessary for inference on a server without a GPU.
+# --extra-index-url lets pip resolve ALL deps together in one pass.
+# torch/torchvision come from the CPU wheel index (~200 MB vs 2 GB GPU build).
+# ultralytics sees torch already satisfied and skips the GPU download.
 RUN pip install --no-cache-dir \
-    torch torchvision --index-url https://download.pytorch.org/whl/cpu
-RUN pip install --no-cache-dir -r requirements.txt
+    --extra-index-url https://download.pytorch.org/whl/cpu \
+    torch torchvision \
+    -r requirements.txt
 
 # Copy source code
 COPY main.py detector.py database.py schemas.py ./
