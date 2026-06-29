@@ -30,6 +30,10 @@ static/uploads
 # Old project subfolder (replaced by flat structure)
 BananaProject
 
+# Model weights — mounted via volume at runtime, not baked into image
+Models/*.pt
+Models/*.onnx
+
 # Data dirs
 datasets
 mysql_data
