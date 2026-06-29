@@ -12,6 +12,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Python dependencies first (layer-cached until requirements change)
 COPY requirements.txt .
+# Install CPU-only PyTorch first — avoids pulling the 2GB GPU build which
+# is unnecessary for inference on a server without a GPU.
+RUN pip install --no-cache-dir \
+    torch torchvision --index-url https://download.pytorch.org/whl/cpu
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source code
